@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adventure Vocab - Interactive Flashcards</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for Kids-Friendly UI -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for cute icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti for rewards -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background: linear-gradient(135deg, #FFF5E4 0%, #FFE3E3 50%, #D6E4E5 100%);
+        }
+        .kids-title {
+            font-family: 'Fredoka One', cursive;
+        }
+        /* 3D Card Flip Styling */
+        .perspective-1000 {
+            perspective: 1000px;
+        }
+        .transform-style-3d {
+            transform-style: preserve-3d;
+        }
+        .backface-hidden {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+        .rotate-y-180 {
+            transform: rotateY(180deg);
+        }
+        /* Handdrawn card border effect */
+        .handdrawn-border {
+            border: 3px solid #2C3E50;
+            box-shadow: 4px 4px 0px #2C3E50;
+            border-radius: 24px;
+        }
+        .handdrawn-button {
+            border: 2px solid #2C3E50;
+            box-shadow: 3px 3px 0px #2C3E50;
+            transition: all 0.15s ease;
+        }
+        .handdrawn-button:active {
+            transform: translate(2px, 2px);
+            box-shadow: 1px 1px 0px #2C3E50;
+        }
+        /* Skeuomorphic paper texture overlay */
+        .paper-texture {
+            background-color: #ffffff;
+            background-image: radial-gradient(#f0f0f0 10%, transparent 10%),
+                              radial-gradient(#f0f0f0 10%, transparent 10%);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between p-4 overflow-x-hidden selection:bg-yellow-200">
+
+    <!-- Top Header Navigation -->
+    <header class="w-full max-w-4xl flex flex-wrap items-center justify-between gap-4 py-3 px-6 bg-white/80 backdrop-blur-md rounded-3xl border-2 border-slate-700/15 shadow-sm mb-6 mt-2">
+        <div class="flex items-center gap-3">
+            <span class="text-3xl">🎒</span>
+            <div>
+                <h1 class="kids-title text-2xl text-slate-800 tracking-wide">Adventure Vocab!</h1>
+                <p class="text-xs text-slate-500 font-bold tracking-wider uppercase">Year 4 Vocabulary Lab</p>
+            </div>
+        </div>
+        
+        <!-- Tab Navigation -->
+        <div class="flex gap-2">
+            <button onclick="switchTab('cards')" id="btn-tab-cards" class="handdrawn-button bg-amber-400 text-slate-800 font-bold px-4 py-2 rounded-xl text-sm flex items-center gap-2">
+                <i class="fa-solid fa-copy"></i> Flashcards
+            </button>
+            <button onclick="switchTab('game')" id="btn-tab-game" class="handdrawn-button bg-white text-slate-600 font-bold px-4 py-2 rounded-xl text-sm flex items-center gap-2">
+                <i class="fa-solid fa-gamepad"></i> Memory Game
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="w-full max-w-lg flex-grow flex flex-col justify-center items-center py-4">
+        
+        <!-- SECTION 1: FLASHCARDS -->
+        <div id="section-cards" class="w-full flex flex-col items-center gap-6">
+            
+            <!-- Cards Progress Indicator -->
+            <div class="flex items-center gap-4 bg-white/95 px-5 py-2 rounded-full border-2 border-slate-800/10 shadow-sm">
+                <span class="text-sm font-bold text-slate-500">Progress:</span>
+                <div class="w-24 bg-slate-100 h-3 rounded-full overflow-hidden border border-slate-300">
+                    <div id="progress-bar" class="bg-emerald-400 h-full transition-all duration-300" style="width: 20%;"></div>
+                </div>
+                <span id="progress-text" class="text-sm font-bold text-slate-700">1 / 5</span>
+            </div>
+
+            <!-- The Flashcard -->
+            <div class="w-full h-[400px] perspective-1000 cursor-pointer" onclick="flipCard()">
+                <div id="flashcard-inner" class="relative w-full h-full transform-style-3d transition-transform duration-500 shadow-xl rounded-[28px]">
+                    
+                    <!-- FRONT SIDE (Word) -->
+                    <div class="absolute inset-0 w-full h-full backface-hidden paper-texture handdrawn-border flex flex-col justify-between p-8 bg-white">
+                        <!-- Card Header -->
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-amber-500 uppercase tracking-widest bg-amber-50 px-3 py-1 rounded-full border border-amber-200">Year 4 Level</span>
+                            <button onclick="event.stopPropagation(); speakWord()" class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-sm border border-blue-200" title="Listen to word">
+                                <i class="fa-solid fa-volume-high text-lg"></i>
+                            </button>
+                        </div>
+
+                        <!-- Card Center Word -->
+                        <div class="text-center my-auto flex flex-col gap-2">
+                            <span id="card-word" class="kids-title text-5xl md:text-6xl text-slate-800 tracking-wide drop-shadow-sm capitalize">Rich</span>
+                            <span id="card-part-of-speech" class="text-sm text-slate-400 font-semibold italic">adjective</span>
+                        </div>
+
+                        <!-- Card Footer Hint -->
+                        <div class="text-center text-xs text-slate-400 font-bold animate-bounce flex items-center justify-center gap-2">
+                            <span>Tap to see picture</span>
+                            <i class="fa-solid fa-repeat"></i>
+                        </div>
+                    </div>
+
+                    <!-- BACK SIDE (Illustration) -->
+                    <div class="absolute inset-0 w-full h-full backface-hidden rotate-y-180 paper-texture handdrawn-border flex flex-col justify-between p-6 bg-amber-50/30">
+                        <!-- Card Header Back -->
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-indigo-500 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200">Illustration Card</span>
+                            <button onclick="event.stopPropagation(); speakWord()" class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center hover:scale-110 active:scale-95 transition-all shadow-sm border border-indigo-200" title="Listen to word">
+                                <i class="fa-solid fa-volume-high text-lg"></i>
+                            </button>
+                        </div>
+
+                        <!-- Hand-drawn realistic style image container -->
+                        <div class="w-full flex-grow flex items-center justify-center py-4" id="card-image-container">
+                            <!-- SVGs will be injected here dynamically -->
+                        </div>
+
+                        <!-- Card Back Footer Hint -->
+                        <div class="text-center text-xs text-slate-400 font-bold flex items-center justify-center gap-2">
+                            <span>Tap to flip back</span>
+                            <i class="fa-solid fa-repeat"></i>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Card Control Buttons -->
+            <div class="w-full flex items-center justify-between gap-4 px-2">
+                <button onclick="prevCard()" class="handdrawn-button bg-white text-slate-700 font-bold px-6 py-3 rounded-2xl flex items-center gap-2 hover:bg-slate-50">
+                    <i class="fa-solid fa-arrow-left"></i> Back
+                </button>
+                <button onclick="flipCard()" class="handdrawn-button bg-indigo-500 text-white font-bold px-6 py-3 rounded-2xl flex items-center gap-2 hover:bg-indigo-600">
+                    <i class="fa-solid fa-arrows-rotate"></i> Flip
+                </button>
+                <button onclick="nextCard()" class="handdrawn-button bg-emerald-400 text-slate-800 font-bold px-6 py-3 rounded-2xl flex items-center gap-2 hover:bg-emerald-500">
+                    Next <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <!-- Divider -->
+            <div class="w-full border-t-2 border-dashed border-slate-700/20 my-4"></div>
+
+            <!-- Magic Card Creator Widget -->
+            <div class="w-full bg-white/90 rounded-3xl p-5 border-2 border-slate-700/15 shadow-md flex flex-col gap-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">✨</span>
+                    <h3 class="kids-title text-lg text-slate-800">Add a Magic Custom Card!</h3>
+                </div>
+                <p class="text-xs text-slate-500 font-bold">Type any English word. We will use the Gemini AI to draw a cute picture for you instantly!</p>
+                <div class="flex gap-2">
+                    <input type="text" id="custom-word-input" placeholder="e.g., dragon, castle, river" class="flex-grow px-4 py-3 rounded-2xl border-2 border-slate-700/20 focus:outline-none focus:border-indigo-500 font-semibold text-slate-700 text-sm">
+                    <button onclick="generateCustomCard()" class="handdrawn-button bg-amber-400 hover:bg-amber-500 text-slate-800 font-bold px-4 py-3 rounded-2xl text-sm flex items-center gap-2 shrink-0">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Create
+                    </button>
+                </div>
+                <!-- Loading overlay state inside form -->
+                <div id="loading-spinner" class="hidden flex items-center justify-center gap-3 py-2 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-200 text-sm font-semibold">
+                    <svg class="animate-spin h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Gemini is painting your picture...</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- SECTION 2: MATCHING GAME -->
+        <div id="section-game" class="w-full hidden flex flex-col items-center gap-6">
+            <div class="bg-white/90 p-5 rounded-3xl border-2 border-slate-700/15 shadow-md w-full text-center">
+                <h3 class="kids-title text-xl text-slate-800 mb-1">🎮 Vocabulary Quiz!</h3>
+                <p class="text-xs text-slate-500 font-bold mb-4 uppercase tracking-wider">Tap the picture that matches the word!</p>
+                
+                <!-- Current Word to Match -->
+                <div class="bg-indigo-50 rounded-2xl py-4 border-2 border-indigo-200/50 mb-6">
+                    <span id="game-target-word" class="kids-title text-4xl text-indigo-700 tracking-wide capitalize">Rich</span>
+                    <p class="text-xs text-indigo-500 font-bold mt-1">Which picture shows this?</p>
+                </div>
+
+                <!-- Picture Choices Grid -->
+                <div class="grid grid-cols-2 gap-4" id="game-choices-grid">
+                    <!-- 4 Choices will be populated here -->
+                </div>
+
+                <!-- Score Board -->
+                <div class="flex justify-between items-center mt-6 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <span class="text-xs font-bold text-slate-500">Score: <span id="game-score" class="text-sm text-emerald-600 font-black">0</span></span>
+                    <button onclick="resetGame()" class="text-xs font-bold text-indigo-600 hover:underline">
+                        <i class="fa-solid fa-arrows-rotate"></i> Reset Game
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Interactive Sound Prompt Overlay (for iOS safari audio unlock & friendly welcome) -->
+    <div id="audio-unlock-overlay" class="fixed inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-4 z-50">
+        <div class="bg-white p-6 rounded-[32px] max-w-sm w-full text-center border-3 border-slate-800/20 shadow-2xl">
+            <div class="text-5xl mb-3">🎨</div>
+            <h2 class="kids-title text-2xl text-slate-800 mb-2">Welcome, Learner!</h2>
+            <p class="text-sm text-slate-500 font-bold mb-6">Let's learn new words with beautiful sketches and sound. Tap start to begin!</p>
+            <button onclick="unlockAudio()" class="w-full handdrawn-button bg-amber-400 hover:bg-amber-500 text-slate-800 font-bold py-4 rounded-2xl text-lg">
+                Let's Start! 🚀
+            </button>
+        </div>
+    </div>
+
+    <!-- Friendly footer -->
+    <footer class="text-center text-xs font-bold text-slate-400 py-4 select-none">
+        🎨 Realistic Artwork for Year 4 Learners • Press <kbd class="bg-white px-1 border rounded shadow-sm">Space</kbd> to flip • <kbd class="bg-white px-1 border rounded shadow-sm">←</kbd> <kbd class="bg-white px-1 border rounded shadow-sm">→</kbd> to navigate
+    </footer>
+
+    <!-- JS Logic and Data -->
+    <script>
+        // Set API Key for live custom card generations
+        const apiKey = ""; 
+
+        // Sound effect helper (using Web Audio API to prevent loading external audio assets)
+        let audioCtx;
+        function playTone(freq, type, duration) {
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                
+                osc.type = type || 'sine';
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                // Simple exponential decay
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (e) {
+                console.log("Audio not fully supported or active", e);
+            }
+        }
+
+        function playDing() {
+            playTone(523.25, 'triangle', 0.1); // C5
+            setTimeout(() => playTone(659.25, 'triangle', 0.15), 80); // E5
+        }
+
+        function playSwoosh() {
+            playTone(200, 'sine', 0.3);
+            playTone(300, 'sine', 0.2);
+        }
+
+        function playSuccessSound() {
+            playTone(523.25, 'triangle', 0.1); // C5
+            setTimeout(() => playTone(659.25, 'triangle', 0.1), 80); // E5
+            setTimeout(() => playTone(783.99, 'triangle', 0.1), 160); // G5
+            setTimeout(() => playTone(1046.50, 'triangle', 0.3), 240); // C6
+        }
+
+        function playFailSound() {
+            playTone(293.66, 'sawtooth', 0.2); // D4
+            setTimeout(() => playTone(220.00, 'sawtooth', 0.3), 150); // A3
+        }
+
+        function unlockAudio() {
+            // Audio context activation
+            if (window.AudioContext || window.webkitAudioContext) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                audioCtx.resume();
+            }
+            document.getElementById('audio-unlock-overlay').style.display = 'none';
+            playDing();
+            speakText("Welcome! Let's learn some wonderful words today.");
+        }
+
+        // Beautiful, highly detailed realistic vector SVGs 
+        const SVG_IMAGES = {
+            rich: `
+                <svg viewBox="0 0 120 120" class="w-56 h-56 mx-auto" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="hatGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#3A3D40"/>
+                            <stop offset="100%" stop-color="#181A1B"/>
+                        </linearGradient>
+                        <linearGradient id="goldRibbon" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0%" stop-color="#FFF3A8"/>
+                            <stop offset="50%" stop-color="#FFD700"/>
+                            <stop offset="100%" stop-color="#B8860B"/>
+                        </linearGradient>
+                        <linearGradient id="suitGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#1E232A"/>
+                            <stop offset="100%" stop-color="#0E1114"/>
+                        </linearGradient>
+                        <linearGradient id="skinGrad" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#FFE0BD"/>
+                            <stop offset="100%" stop-color="#FFCD94"/>
+                        </linearGradient>
+                    </defs>
+                    <!-- Background Soft Royal Glow -->
+                    <circle cx="60" cy="60" r="48" fill="#FFD700" opacity="0.15" />
+                    
+                    <!-- Suit Jacket & Vest -->
+                    <path d="M 25 110 C 25 80 40 70 60 70 C 80 70 95 80 95 110" fill="url(#suitGrad)" stroke="#181A1B" stroke-width="2"/>
+                    <!-- White Collared Shirt -->
+                    <path d="M 45 78 L 60 98 L 75 78 Z" fill="#FFFFFF"/>
+                    <!-- Royal Red Tie -->
+                    <path d="M 57 88 L 63 88 L 65 110 L 55 110 Z" fill="#C0392B" stroke="#7B241C" stroke-width="1"/>
+                    <circle cx="60" cy="85" r="2.5" fill="#FFD700"/>
+
+                    <!-- Neck -->
+                    <rect x="48" y="65" width="24" height="15" fill="url(#skinGrad)" stroke="#E0A96D" stroke-width="1.5"/>
+
+                    <!-- Face Portrait -->
+                    <path d="M 38 42 C 38 25 82 25 82 42 C 82 58 75 70 60 70 C 45 70 38 58 38 42 Z" fill="url(#skinGrad)" stroke="#E0A96D" stroke-width="2"/>
+
+                    <!-- Hair (Slightly graying temples) -->
+                    <path d="M 38 35 Q 35 22 45 18" fill="none" stroke="#7F8C8D" stroke-width="3" stroke-linecap="round"/>
+                    <path d="M 82 35 Q 85 22 75 18" fill="none" stroke="#7F8C8D" stroke-width="3" stroke-linecap="round"/>
+
+                    <!-- Elegant Top Hat -->
+                    <ellipse cx="60" cy="22" rx="32" ry="5" fill="url(#hatGrad)" stroke="#181A1B" stroke-width="2"/>
+                    <path d="M 34 21 L 38 -5 L 82 -5 L 86 21 Z" fill="url(#hatGrad)" stroke="#181A1B" stroke-width="2"/>
+                    <!-- Gold Ribbon on Hat -->
+                    <path d="M 36 14 L 38 -1 L 82 -1 L 84 14 Z" fill="url(#goldRibbon)"/>
+
+                    <!-- Realistic eyes and expression (Classy, Warm) -->
+                    <ellipse cx="50" cy="44" rx="3.5" ry="2.5" fill="#2C3E50"/>
+                    <circle cx="49" cy="43" r="1" fill="#FFFFFF"/>
+                    <!-- Monocle on Right Eye -->
+                    <circle cx="70" cy="44" r="7" fill="none" stroke="url(#goldRibbon)" stroke-width="2"/>
+                    <line x1="77" y1="44" x2="90" y2="78" stroke="url(#goldRibbon)" stroke-width="1.5"/>
+                    <path d="M 68 44 Q 70 42 72 44" fill="none" stroke="#2C3E50" stroke-width="2"/>
+
+                    <!-- Well-groomed mustache -->
+                    <path d="M 45 58 Q 60 54 60 58 Q 60 54 75 58 Q 80 54 78 50 Q 60 52 42 50 Z" fill="#2C3E50"/>
+
+                    <!-- Friendly Smile -->
+                    <path d="M 52 62 Q 60 66 68 62" fill="none" stroke="#C0392B" stroke-width="2" stroke-linecap="round"/>
+
+                    <!-- Sparkles of wealth -->
+                    <path d="M 94 38 L 100 38 M 97 35 L 97 41" stroke="#FFD700" stroke-width="1.5" stroke-linecap="round"/>
+                    <path d="M 22 46 L 28 46 M 25 43 L 25 49" stroke="#FFD700" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+            `,
+            poor: `
+                <svg viewBox="0 0 120 120" class="w-56 h-56 mx-auto" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="wornHat" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#8D6E63"/>
+                            <stop offset="100%" stop-color="#5D4037"/>
+                        </linearGradient>
+                        <linearGradient id="shabbyCoat" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#4E5D6C"/>
+                            <stop offset="100%" stop-color="#2C353E"/>
+                        </linearGradient>
+                        <linearGradient id="skinPoor" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#FFD1A9"/>
+                            <stop offset="100%" stop-color="#E2A76F"/>
+                        </linearGradient>
+                    </defs>
+                    <!-- Background Soft Humble Glow -->
+                    <circle cx="60" cy="60" r="48" fill="#8D6E63" opacity="0.1" />
+
+                    <!-- Simple Worn Coat (Shabby, soft colors) -->
+                    <path d="M 25 110 C 25 82 40 74 60 74 C 80 74 95 82 95 110" fill="url(#shabbyCoat)" stroke="#2C353E" stroke-width="2"/>
+                    <!-- Visible Patch on Left Shoulder -->
+                    <path d="M 28 88 L 38 86 L 36 96 L 26 94 Z" fill="#8B7355" stroke="#3E2723" stroke-width="1.2"/>
+                    <!-- Patch Stitching Details -->
+                    <line x1="30" y1="85" x2="32" y2="98" stroke="#3D2B1F" stroke-dasharray="2,2"/>
+                    
+                    <!-- Plain Grey Undershirt -->
+                    <path d="M 48 80 L 60 94 L 72 80 Z" fill="#90A4AE" stroke="#455A64" stroke-width="1.5"/>
+
+                    <!-- Neck -->
+                    <rect x="50" y="68" width="20" height="15" fill="url(#skinPoor)" stroke="#D79A63" stroke-width="1.5"/>
+
+                    <!-- Humble Portrait Face -->
+                    <path d="M 40 46 C 40 28 80 28 80 46 C 80 62 72 72 60 72 C 48 72 40 62 40 46 Z" fill="url(#skinPoor)" stroke="#D79A63" stroke-width="2"/>
+
+                    <!-- Soft Worn Cap (Flat Cap or Peasant Hat) -->
+                    <path d="M 36 36 Q 60 20 84 36 Z" fill="url(#wornHat)" stroke="#3E2723" stroke-width="2"/>
+                    <path d="M 32 36 Q 60 30 88 36" stroke="#3E2723" stroke-width="2" fill="none"/>
+
+                    <!-- Warm Kind Eyes -->
+                    <ellipse cx="51" cy="48" rx="3" ry="2" fill="#3E2723"/>
+                    <circle cx="50" cy="47" r="0.7" fill="#FFFFFF"/>
+                    <path d="M 47 44 Q 51 42 55 44" fill="none" stroke="#3E2723" stroke-width="1.5" stroke-linecap="round"/>
+
+                    <ellipse cx="69" cy="48" rx="3" ry="2" fill="#3E2723"/>
+                    <circle cx="68" cy="47" r="0.7" fill="#FFFFFF"/>
+                    <path d="M 65 44 Q 69 42 73 44" fill="none" stroke="#3E2723" stroke-width="1.5" stroke-linecap="round"/>
+
+                    <!-- Humble, Friendly Smile (Contented, peaceful look) -->
+                    <path d="M 52 60 Q 60 65 68 60" fill="none" stroke="#A94442" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            `,
+            rock: `
+                <svg viewBox="0 0 120 120" class="w-56 h-56 mx-auto" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="rockGrad" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#D3D3D3"/>
+                            <stop offset="35%" stop-color="#A9A9A9"/>
+                            <stop offset="75%" stop-color="#808080"/>
+                            <stop offset="100%" stop-color="#505050"/>
+                        </linearGradient>
+                    </defs>
+                    <!-- Deep Realistic Drop Shadow -->
+                    <ellipse cx="60" cy="95" rx="45" ry="9" fill="#1C1C1C" opacity="0.4" />
+
+                    <!-- Realistic Rugged Boulder -->
+                    <path d="M 22 84 Q 15 52 38 34 Q 65 20 95 38 Q 105 62 98 84 Q 82 96 55 94 Q 30 96 22 84 Z" fill="url(#rockGrad)" stroke="#3A3A3A" stroke-width="2.5" stroke-linejoin="round"/>
+                    
+                    <!-- Crack lines and geological sediment layers -->
+                    <path d="M 25 65 Q 45 60 75 72 Q 95 65 98 75" fill="none" stroke="#484848" stroke-width="2" opacity="0.75" stroke-linecap="round"/>
+                    <path d="M 38 42 Q 62 38 85 48" fill="none" stroke="#484848" stroke-width="1.5" opacity="0.6" stroke-linecap="round"/>
+                    
+                    <!-- Angular rock facets and highlights -->
+                    <polygon points="38,34 50,26 65,34 52,44" fill="#E8E8E8" opacity="0.25" />
+                    <polygon points="65,34 85,28 95,38 78,48" fill="#E8E8E8" opacity="0.15" />
+                    <polygon points="22,65 38,72 30,84 18,76" fill="#303030" opacity="0.3" />
+
+                    <!-- Natural Grass Tufts growing at the base of the rock -->
+                    <path d="M 12 95 Q 16 75 24 92" fill="none" stroke="#556B2F" stroke-width="2.5" stroke-linecap="round"/>
+                    <path d="M 17 95 Q 23 72 28 94" fill="none" stroke="#6B8E23" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M 92 94 Q 96 76 100 92" fill="none" stroke="#556B2F" stroke-width="2.5" stroke-linecap="round"/>
+                    <path d="M 97 94 Q 103 70 106 95" fill="none" stroke="#6B8E23" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M 50 96 Q 54 85 58 96" fill="none" stroke="#6B8E23" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            `,
+            cave: `
+                <svg viewBox="0 0 120 120" class="w-56 h-56 mx-auto" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="mountainGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#8B7355"/>
+                            <stop offset="50%" stop-color="#705435"/>
+                            <stop offset="100%" stop-color="#3D2B1F"/>
+                        </linearGradient>
+                        <radialGradient id="caveDarkness" cx="50%" cy="50%" r="50%">
+                            <stop offset="0%" stop-color="#050505"/>
+                            <stop offset="70%" stop-color="#151515"/>
+                            <stop offset="100%" stop-color="#2D2D2D"/>
+                        </radialGradient>
+                        <linearGradient id="mossGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#6B8E23"/>
+                            <stop offset="100%" stop-color="#556B2F"/>
+                        </linearGradient>
+                    </defs>
+
+                    <!-- Cave Mountain/Rock Structure -->
+                    <path d="M 4 100 Q 15 25 60 18 Q 105 25 116 100 Z" fill="url(#mountainGrad)" stroke="#22150C" stroke-width="3" stroke-linejoin="round"/>
+                    
+                    <!-- Realistic Cave Opening (Deep, Dark Cavern) -->
+                    <path d="M 28 100 C 24 60 40 45 60 45 C 80 45 96 60 92 100 Z" fill="url(#caveDarkness)" stroke="#22150C" stroke-width="2.5"/>
+
+                    <!-- Hanging Stalactites inside the Cave mouth -->
+                    <polygon points="38,48 42,47 40,62" fill="#3D2B1F" stroke="#22150C" stroke-width="1"/>
+                    <polygon points="46,46 51,46 48,68" fill="#5C4033" stroke="#22150C" stroke-width="1"/>
+                    <polygon points="56,45 62,45 59,74" fill="#3D2B1F" stroke="#22150C" stroke-width="1"/>
+                    <polygon points="70,46 76,46 73,65" fill="#5C4033" stroke="#22150C" stroke-width="1"/>
+                    <polygon points="80,48 84,48 82,58" fill="#3D2B1F" stroke="#22150C" stroke-width="1"/>
+
+                    <!-- Realistic Moss / Vine Overgrowth dripping over the entrance -->
+                    <path d="M 15 75 Q 30 25 105 75" fill="none" stroke="url(#mossGrad)" stroke-width="6" stroke-linecap="round" opacity="0.9"/>
+                    <path d="M 40 38 Q 42 55 41 58 M 78 35 Q 75 52 77 56" fill="none" stroke="#556B2F" stroke-width="2" stroke-linecap="round"/>
+                    
+                    <!-- Rocky surface textures and multi-layered mountain facets -->
+                    <path d="M 10 90 L 25 80 L 32 100" fill="none" stroke="#3D2B1F" stroke-width="2" opacity="0.4"/>
+                    <path d="M 110 90 L 95 80 L 88 100" fill="none" stroke="#3D2B1F" stroke-width="2" opacity="0.4"/>
+                    <path d="M 22 55 L 35 48" stroke="#F5F5DC" stroke-width="1.5" opacity="0.15" stroke-linecap="round"/>
+                    <path d="M 98 55 L 85 48" stroke="#F5F5DC" stroke-width="1.5" opacity="0.15" stroke-linecap="round"/>
+                </svg>
+            `,
+            wood: `
+                <svg viewBox="0 0 120 120" class="w-56 h-56 mx-auto" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="barkGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#8B5A2B"/>
+                            <stop offset="100%" stop-color="#5C3A21"/>
+                        </linearGradient>
+                        <linearGradient id="innerWood" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#FFE4C4"/>
+                            <stop offset="100%" stop-color="#CD853F"/>
+                        </linearGradient>
+                    </defs>
+                    <!-- Ground shadow -->
+                    <ellipse cx="60" cy="94" rx="44" ry="8" fill="#1C1C1C" opacity="0.3" />
+
+                    <!-- Bottom Log Left -->
+                    <g transform="translate(0, 10)">
+                        <rect x="22" y="55" width="46" height="24" rx="3" fill="url(#barkGrad)" stroke="#3A2010" stroke-width="2"/>
+                        <ellipse cx="22" cy="67" rx="5" ry="12" fill="url(#innerWood)" stroke="#3A2010" stroke-width="2"/>
+                        <!-- Growth rings -->
+                        <ellipse cx="22" cy="67" rx="2.5" ry="6" fill="none" stroke="#8B5A2B" stroke-width="1.2"/>
+                    </g>
+
+                    <!-- Bottom Log Right -->
+                    <g transform="translate(30, 12)">
+                        <rect x="22" y="55" width="46" height="24" rx="3" fill="url(#barkGrad)" stroke="#3A2010" stroke-width="2"/>
+                        <ellipse cx="22" cy="67" rx="5" ry="12" fill="url(#innerWood)" stroke="#3A2010" stroke-width="2"/>
+                        <ellipse cx="22" cy="67" rx="2.5" ry="6" fill="none" stroke="#8B5A2B" stroke-width="1.2"/>
+                    </g>
+
+                    <!-- Top Log Centered -->
+                    <g transform="translate(15, -10)">
+                        <rect x="22" y="55" width="46" height="24" rx="3" fill="url(#barkGrad)" stroke="#3A2010" stroke-width="2.5"/>
+                        <ellipse cx="22" cy="67" rx="5" ry="12" fill="url(#innerWood)" stroke="#3A2010" stroke-width="2.5"/>
+                        <ellipse cx="22" cy="67" rx="2.5" ry="6" fill="none" stroke="#8B5A2B" stroke-width="1.5"/>
+                    </g>
+
+                    <!-- Splintered wood textures and fine bark details -->
+                    <line x1="45" y1="52" x2="72" y2="52" stroke="#3A2010" stroke-width="1.5" opacity="0.5"/>
+                    <line x1="32" y1="72" x2="55" y2="72" stroke="#3A2010" stroke-width="1.5" opacity="0.5"/>
+                    <line x1="62" y1="74" x2="85" y2="74" stroke="#3A2010" stroke-width="1.5" opacity="0.5"/>
+
+                    <!-- Small realistic pine needles/leaves at the bottom -->
+                    <path d="M 88 84 Q 96 74 104 88" fill="none" stroke="#556B2F" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M 92 86 Q 100 76 102 90" fill="none" stroke="#6B8E23" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+            `
+        };
+
+        // Standard Flashcards database
+        const deck = [
+            {
+                word: "rich",
+                type: "adjective",
+                sentence: "The kind king shared his rich chest of golden coins with the town.",
+                svgKey: "rich"
+            },
+            {
+                word: "poor",
+                type: "adjective",
+                sentence: "Even though the traveler was poor, he had a heart full of happiness.",
+                svgKey: "poor"
+            },
+            {
+                word: "rock",
+                type: "noun",
+                sentence: "We found a smooth grey rock shaped like a tiny dinosaur egg.",
+                svgKey: "rock"
+            },
+            {
+                word: "cave",
+                type: "noun",
+                sentence: "We turned on our flashlights to explore the mysterious, cool stone cave.",
+                svgKey: "cave"
+            },
+            {
+                word: "wood",
+                type: "noun",
+                sentence: "Grandpa chopped dry pine wood to make a cozy fireplace.",
+                svgKey: "wood"
+            }
+        ];
+
+        let currentIndex = 0;
+        let isFlipped = false;
+
+        // Populate Card Data onto Screen
+        function loadCard(index) {
+            const card = deck[index];
+            isFlipped = false;
+            document.getElementById('flashcard-inner').classList.remove('rotate-y-180');
+
+            // Set front values
+            document.getElementById('card-word').textContent = card.word;
+            document.getElementById('card-part-of-speech').textContent = card.type;
+
+            // Set back values
+            const imageContainer = document.getElementById('card-image-container');
+            if (card.imageSrc) {
+                // Generated custom image
+                imageContainer.innerHTML = `<img src="${card.imageSrc}" alt="${card.word}" class="w-56 h-56 object-contain rounded-2xl handdrawn-border bg-white" />`;
+            } else if (SVG_IMAGES[card.svgKey]) {
+                // Native hand-drawn realistic SVG
+                imageContainer.innerHTML = SVG_IMAGES[card.svgKey];
+            } else {
+                // Fallback default placeholder
+                imageContainer.innerHTML = `<div class="w-56 h-56 flex items-center justify-center bg-indigo-50 border-2 border-indigo-200 rounded-2xl kids-title text-indigo-500 text-6xl">🎨</div>`;
+            }
+
+            // Progress counters
+            document.getElementById('progress-text').textContent = `${index + 1} / ${deck.length}`;
+            document.getElementById('progress-bar').style.width = `${((index + 1) / deck.length) * 100}%`;
+        }
+
+        function flipCard() {
+            isFlipped = !isFlipped;
+            const cardInner = document.getElementById('flashcard-inner');
+            playSwoosh();
+            
+            if (isFlipped) {
+                cardInner.classList.add('rotate-y-180');
+            } else {
+                cardInner.classList.remove('rotate-y-180');
+            }
+        }
+
+        function nextCard() {
+            currentIndex = (currentIndex + 1) % deck.length;
+            loadCard(currentIndex);
+            playDing();
+        }
+
+        function prevCard() {
+            currentIndex = (currentIndex - 1 + deck.length) % deck.length;
+            loadCard(currentIndex);
+            playDing();
+        }
+
+        // Text-to-Speech friendly voices
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Stop active speech
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.pitch = 1.3;  // Child-friendly high pitch
+                utterance.rate = 0.85;  // Slow, clear pronunciation
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // Speak the active vocabulary word
+        function speakWord() {
+            speakText(deck[currentIndex].word);
+        }
+
+        // Tab Management
+        function switchTab(tabName) {
+            playDing();
+            const btnCards = document.getElementById('btn-tab-cards');
+            const btnGame = document.getElementById('btn-tab-game');
+            const secCards = document.getElementById('section-cards');
+            const secGame = document.getElementById('section-game');
+
+            if (tabName === 'cards') {
+                btnCards.className = "handdrawn-button bg-amber-400 text-slate-800 font-bold px-4 py-2 rounded-xl text-sm flex items-center gap-2";
+                btnGame.className = "handdrawn-button bg-white text-slate-600 font-bold px-4 py-2 rounded-xl text-sm flex items-center gap-2";
+                secCards.classList.remove('hidden');
+                secGame.classList.add('hidden');
+            } else {
+                btnCards.className = "handdrawn-button bg-white text-slate-600 font-bold px-4 py-2 rounded-xl text-sm flex items-center gap-2";
+                btnGame.className = "handdrawn-button bg-amber-400 text-slate-800 font-bold px-4 py-2 rounded-xl text-sm flex items-center gap-2";
+                secCards.classList.add('hidden');
+                secGame.classList.remove('hidden');
+                initGame();
+            }
+        }
+
+        /* LIVE GEMINI API GENERATION METHOD (Rule Compliant) */
+        async function generateCustomCard() {
+            const inputVal = document.getElementById('custom-word-input').value.trim();
+            if (!inputVal) return;
+
+            const submitBtn = document.querySelector('#custom-word-input + button');
+            const spinner = document.getElementById('loading-spinner');
+            
+            // UI Loading Setup
+            submitBtn.disabled = true;
+            spinner.classList.remove('hidden');
+            
+            // Build child-friendly illustration prompt
+            const prompt = `A clean, realistic-style digital illustration of a "${inputVal}" on a solid white background. Highly expressive, realistic textures and shadows, suitable for a 9-year-old child's vocabulary learning card. Keep it friendly and positive.`;
+
+            // Backoff logic for API call
+            let retries = 5;
+            let delay = 1000;
+            let success = false;
+            let resultData;
+
+            while (retries > 0 && !success) {
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            instances: [{ prompt: prompt }],
+                            parameters: { sampleCount: 1 }
+                        })
+                    });
+
+                    if (!response.ok) throw new Error("API Limit exceeded or down");
+                    
+                    resultData = await response.json();
+                    success = true;
+                } catch (e) {
+                    retries--;
+                    if (retries === 0) {
+                        break;
+                    }
+                    await new Promise(r => setTimeout(r, delay));
+                    delay *= 2; // Exponential Backoff
+                }
+            }
+
+            if (success && resultData?.predictions?.[0]?.bytesBase64Encoded) {
+                const b64 = resultData.predictions[0].bytesBase64Encoded;
+                const imgUrl = `data:image/png;base64,${b64}`;
+
+                // Add card to our working deck list
+                const newCard = {
+                    word: inputVal,
+                    type: "noun",
+                    sentence: `Look at this fantastic picture of a ${inputVal}!`,
+                    imageSrc: imgUrl
+                };
+
+                deck.push(newCard);
+                currentIndex = deck.length - 1; // Jump to new card
+                loadCard(currentIndex);
+                
+                // Clear state
+                document.getElementById('custom-word-input').value = "";
+                playSuccessSound();
+                confetti({
+                    particleCount: 50,
+                    spread: 60,
+                    origin: { y: 0.8 }
+                });
+            } else {
+                // Fail notification banner inside modal (without browser alert!)
+                const errNotify = document.createElement('div');
+                errNotify.className = "text-center text-xs font-bold text-red-500 bg-red-50 py-2 rounded-xl mt-2 border border-red-200 transition-all duration-300";
+                errNotify.textContent = "Oops! Our Magic AI is resting. Try again in a minute!";
+                document.getElementById('custom-word-input').parentElement.after(errNotify);
+                playFailSound();
+                setTimeout(() => errNotify.remove(), 4000);
+            }
+
+            submitBtn.disabled = false;
+            spinner.classList.add('hidden');
+        }
+
+        /* QUIZ / GAME ENGINE LOGIC */
+        let gameTargetIndex = 0;
+        let score = 0;
+
+        function initGame() {
+            // Generate match game round
+            if (deck.length < 2) return;
+            
+            // Choose a target card
+            gameTargetIndex = Math.floor(Math.random() * deck.length);
+            const targetCard = deck[gameTargetIndex];
+            document.getElementById('game-target-word').textContent = targetCard.word;
+
+            // Generate options (correct + random incorrects)
+            let options = [targetCard];
+            let pool = deck.filter((_, idx) => idx !== gameTargetIndex);
+            
+            // Shuffle pool and select choices
+            pool.sort(() => Math.random() - 0.5);
+            const added = pool.slice(0, Math.min(3, pool.length));
+            options = options.concat(added);
+            
+            // Final shuffle of answers
+            options.sort(() => Math.random() - 0.5);
+
+            // Populate choices grid
+            const grid = document.getElementById('game-choices-grid');
+            grid.innerHTML = "";
+
+            options.forEach(opt => {
+                const choiceBtn = document.createElement('button');
+                choiceBtn.className = "bg-white p-3 rounded-2xl handdrawn-border hover:bg-amber-50 transition-all flex flex-col items-center justify-center gap-2 hover:scale-105";
+                
+                // Inject matching illustration or custom image
+                let artContent = "";
+                if (opt.imageSrc) {
+                    artContent = `<img src="${opt.imageSrc}" class="w-24 h-24 object-contain rounded-xl" />`;
+                } else {
+                    artContent = SVG_IMAGES[opt.svgKey] ? SVG_IMAGES[opt.svgKey].replace('w-56 h-56', 'w-24 h-24') : '❓';
+                }
+
+                choiceBtn.innerHTML = `
+                    <div class="h-24 w-full flex items-center justify-center">${artContent}</div>
+                `;
+                
+                choiceBtn.onclick = () => submitAnswer(opt.word === targetCard.word, choiceBtn);
+                grid.appendChild(choiceBtn);
+            });
+        }
+
+        function submitAnswer(isCorrect, element) {
+            if (isCorrect) {
+                score++;
+                document.getElementById('game-score').textContent = score;
+                element.className = "bg-emerald-100 p-3 rounded-2xl border-4 border-emerald-500 flex flex-col items-center justify-center gap-2 transform scale-105 pointer-events-none transition-all duration-200";
+                playSuccessSound();
+                
+                confetti({
+                    particleCount: 30,
+                    spread: 40,
+                    origin: { y: 0.7 }
+                });
+
+                // Next round delay
+                setTimeout(() => {
+                    initGame();
+                }, 1200);
+            } else {
+                element.className = "bg-red-100 p-3 rounded-2xl border-4 border-red-500 flex flex-col items-center justify-center gap-2 pointer-events-none transition-all duration-200";
+                playFailSound();
+                
+                // Reset styling slightly after failure to let them try again
+                setTimeout(() => {
+                    element.className = "bg-white p-3 rounded-2xl handdrawn-border hover:bg-amber-50 transition-all flex flex-col items-center justify-center gap-2 hover:scale-105";
+                }, 1000);
+            }
+        }
+
+        function resetGame() {
+            score = 0;
+            document.getElementById('game-score').textContent = score;
+            playDing();
+            initGame();
+        }
+
+        // Keyboard Controls
+        document.addEventListener('keydown', (e) => {
+            if (document.activeElement.tagName === 'INPUT') return; // Ignore when typing
+            
+            if (e.code === 'Space') {
+                e.preventDefault();
+                flipCard();
+            } else if (e.code === 'ArrowRight') {
+                nextCard();
+            } else if (e.code === 'ArrowLeft') {
+                prevCard();
+            }
+        });
+
+        // Swipe Gestures for touchscreens
+        let touchstartX = 0;
+        let touchendX = 0;
+
+        document.getElementById('flashcard-inner').addEventListener('touchstart', e => {
+            touchstartX = e.changedTouches[0].screenX;
+        });
+
+        document.getElementById('flashcard-inner').addEventListener('touchend', e => {
+            touchendX = e.changedTouches[0].screenX;
+            handleGesture();
+        });
+
+        function handleGesture() {
+            if (touchendX < touchstartX - 60) {
+                // Swiped Left
+                nextCard();
+            }
+            if (touchendX > touchstartX + 60) {
+                // Swiped Right
+                prevCard();
+            }
+        }
+
+        // Initialize App State
+        window.onload = () => {
+            loadCard(currentIndex);
+        };
+    </script>
+</body>
+</html>
